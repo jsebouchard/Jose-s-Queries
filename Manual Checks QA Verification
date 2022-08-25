@@ -1,0 +1,38 @@
+--Verifiy if there's a manual check transaction within two last months. If so, the request should not proceed (or at least be manually verified)
+USE BWM
+    OPEN SYMMETRIC KEY BWMSymKey
+    DECRYPTION BY CERTIFICATE BWMCert
+        SELECT CT.LoanID, L.AccountBalance, TransactionType, ProcessingDate, CompletedDate, L.[Status]
+        FROM tblCustomerTransaction CT
+        JOIN tblLoan L ON CT.LoanID = L.LoanID
+        WHERE TransactionType IN ('M') 
+        AND CT.LoanID IN () --LoanIDs go here
+        AND CT.TransactionDate BETWEEN CONVERT(CHAR(8), DATEADD(mm, -2, GETDATE()), 112) AND GETDATE()
+ORDER BY CompletedDate DESC
+CLOSE ALL SYMMETRIC KEYS;
+
+
+--Verify if there's a Refund transaction within the last two months. If so, the request should not proceed (or at least be manually verified)
+USE BWM
+    OPEN SYMMETRIC KEY BWMSymKey
+    DECRYPTION BY CERTIFICATE BWMCert
+        SELECT LoanID, TransactionType, ProcessingDate, CompletedDate, TransactionDate
+        FROM tblCustomerTransaction 
+        WHERE TransactionType IN ('F')  
+        AND LoanID IN () --LoanIDs go here
+        AND TransactionDate BETWEEN CONVERT(CHAR(8), DATEADD(mm, -2, GETDATE()), 112) AND GETDATE()
+        --AND TransactionDate BETWEEN '2022-04-01'AND '2022-06-07' --when looking for a specific date
+        --AND CT.CompletedDate IS NOT NULL
+        ORDER BY CompletedDate DESC
+CLOSE ALL SYMMETRIC KEYS;
+
+
+--Balance and status Verification. The balance should match with the amount requested and the status of the account should be Cancelled (D) or suspended (S). If not, the request should be manually verified. 
+USE BWM
+    OPEN SYMMETRIC KEY BWMSymKey
+    DECRYPTION BY CERTIFICATE BWMCert
+        SELECT LoanID, AccountBalance, [Status]
+        FROM tblLoan
+        WHERE LoanID IN () --LoanIDs go here
+ORDER BY LoanID
+CLOSE ALL SYMMETRIC KEYS;
